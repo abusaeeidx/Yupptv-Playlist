@@ -1,0 +1,46 @@
+name: task
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+jobs:
+  update_files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Extract zip
+        env:
+          ZIP_F: ${{ secrets.ZIP_F }}
+          ZIP_FILE: files/up-v2.zip
+        run: |
+          python files/unl.py
+
+      - name: Execute update
+        run: |
+          python workspace/v2.py
+
+      - name: Commit and push updates
+        run: |
+          git config --global user.name "Bot"
+          git config --global user.email "bot@github.com"
+          git add *.m3u || true
+          if ! git diff --cached --quiet; then
+            git commit -m "update files"
+            git push
+          else
+            echo "No changes to commit"
+          fi
